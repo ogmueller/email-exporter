@@ -185,6 +185,7 @@ def cyrus_folder_to_filesystem_path(maildir_root, folder_path):
     letter of the second path component. For example:
     - Logical path: /shop/customer -> Filesystem: /c/shop/customer
     - Logical path: /prospects -> Filesystem: /p/prospects
+    - If first char isn't a-z, uses 'q': /shop/123orders -> Filesystem: /q/shop/123orders
     
     Args:
         maildir_root (str): Root directory of the Cyrus mail storage
@@ -205,13 +206,17 @@ def cyrus_folder_to_filesystem_path(maildir_root, folder_path):
     if len(path_parts) >= 2:
         # Hash is based on the second folder (e.g., 'customer' in 'shop/customer')
         second_folder = path_parts[1]
-        hash_letter = second_folder[0].lower()
+        first_char = second_folder[0].lower()
+        # If first character isn't a-z, Cyrus uses 'q'
+        hash_letter = first_char if first_char.isalpha() else 'q'
         return os.path.join(maildir_root, hash_letter, folder_path)
     elif len(path_parts) == 1:
         # Only one folder level - this would be the "second" folder in Cyrus terms
         # So /prospects would become /p/prospects
         first_folder = path_parts[0]
-        hash_letter = first_folder[0].lower()
+        first_char = first_folder[0].lower()
+        # If first character isn't a-z, Cyrus uses 'q'
+        hash_letter = first_char if first_char.isalpha() else 'q'
         return os.path.join(maildir_root, hash_letter, folder_path)
 
     return maildir_root
@@ -547,7 +552,7 @@ def process_email(eml_path, output_dir, maildir_path, logical_folder_path, older
             html_content = mail.text_html[0] if mail.text_html else ""
             f.write("<html><body>\n")
             f.write(html_content)
-            f.write("</body></html>\n")
+            f.write("\n</body></html>\n")
             f.write("\n\n---\n\n## Attachments:\n")
             for att in mail.attachments:
                 att_fname = safe_filename(att["filename"])
